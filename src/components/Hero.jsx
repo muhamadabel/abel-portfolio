@@ -30,45 +30,48 @@ function Visual({ ready }) {
       animate={ready ? { opacity: 1 } : { opacity: 0 }}
       transition={{ duration: 1, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
     >
-      <span className="hero__glow" aria-hidden="true" />
+      {/* Semua dibungkus stage seukuran foto biar nge-cluster rapi dan ke-center */}
+      <div className="hero__stage">
+        <span className="hero__glow" aria-hidden="true" />
 
-      <span className="hero__ringwrap" aria-hidden="true">
-        <svg className="hero__ring" viewBox="0 0 200 200">
-          <defs>
-            <path id="heroRingPath" d="M100,100 m-72,0 a72,72 0 1,1 144,0 a72,72 0 1,1 -144,0" fill="none" />
-          </defs>
-          <text>
-            <textPath href="#heroRingPath">
-              MUHAMMAD ABEL ABHINAYA · FRONTEND DEVELOPER ·&nbsp;
-            </textPath>
-          </text>
-        </svg>
-        <span className="hero__ring-icon">↓</span>
-      </span>
+        <span className="hero__dot hero__dot--1" aria-hidden="true" />
+        <span className="hero__dot hero__dot--2" aria-hidden="true" />
+        <span className="hero__dot hero__dot--3" aria-hidden="true" />
 
-      <span className="hero__dot hero__dot--1" aria-hidden="true" />
-      <span className="hero__dot hero__dot--2" aria-hidden="true" />
-      <span className="hero__dot hero__dot--3" aria-hidden="true" />
+        <span className="hero__ringwrap" aria-hidden="true">
+          <svg className="hero__ring" viewBox="0 0 200 200">
+            <defs>
+              <path id="heroRingPath" d="M100,100 m-72,0 a72,72 0 1,1 144,0 a72,72 0 1,1 -144,0" fill="none" />
+            </defs>
+            <text>
+              <textPath href="#heroRingPath">
+                MUHAMMAD ABEL ABHINAYA · FRONTEND DEVELOPER ·&nbsp;
+              </textPath>
+            </text>
+          </svg>
+          <span className="hero__ring-icon">↓</span>
+        </span>
 
-      <motion.div
-        className="hero__cutout"
-        initial={{ y: 28, opacity: 0 }}
-        animate={ready ? { y: 0, opacity: 1 } : { y: 28, opacity: 0 }}
-        transition={{ duration: 1.1, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      >
-        <img
-          src={profile.photo}
-          alt={`Foto ${profile.name}`}
-          style={{ opacity: loaded ? 1 : 0 }}
-          onLoad={(e) => setLoaded(e.currentTarget.naturalWidth > 1)}
-          onError={() => setLoaded(false)}
-        />
-        {!loaded && (
-          <span className="hero__cutout-fallback" aria-hidden="true">
-            {profile.initials}
-          </span>
-        )}
-      </motion.div>
+        <motion.div
+          className="hero__cutout"
+          initial={{ y: 24, opacity: 0 }}
+          animate={ready ? { y: 0, opacity: 1 } : { y: 24, opacity: 0 }}
+          transition={{ duration: 1.1, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        >
+          <img
+            src={profile.photo}
+            alt={`Foto ${profile.name}`}
+            style={{ opacity: loaded ? 1 : 0 }}
+            onLoad={(e) => setLoaded(e.currentTarget.naturalWidth > 1)}
+            onError={() => setLoaded(false)}
+          />
+          {!loaded && (
+            <span className="hero__cutout-fallback" aria-hidden="true">
+              {profile.initials}
+            </span>
+          )}
+        </motion.div>
+      </div>
     </motion.div>
   )
 }

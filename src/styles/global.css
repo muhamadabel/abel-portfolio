@@ -422,41 +422,47 @@ p {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  min-height: 58vh;
+  min-height: 54vh;
+}
+.hero__stage {
+  position: relative;
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  justify-content: center;
 }
 .hero__glow {
   position: absolute;
-  bottom: 6%;
   left: 50%;
-  width: 80%;
+  top: 6%;
+  width: 100%;
   aspect-ratio: 1;
   transform: translateX(-50%);
-  background: radial-gradient(circle at 50% 50%, rgba(180, 85, 45, 0.32), rgba(180, 85, 45, 0) 62%);
+  background: radial-gradient(circle at 50% 50%, rgba(180, 85, 45, 0.3), rgba(180, 85, 45, 0) 62%);
   filter: blur(8px);
   z-index: 0;
   animation: heroGlow 8s ease-in-out infinite;
 }
 @keyframes heroGlow {
-  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.85; }
-  50% { transform: translateX(-50%) scale(1.13); opacity: 1; }
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.8; }
+  50% { transform: translateX(-50%) scale(1.12); opacity: 1; }
 }
 .hero__cutout {
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 420px;
   display: flex;
-  align-items: flex-end;
   justify-content: center;
-  min-height: 200px;
+  min-height: 180px;
 }
 .hero__cutout img {
   width: 100%;
   height: auto;
   display: block;
-  filter: drop-shadow(0 26px 32px rgba(22, 21, 15, 0.22));
+  filter: drop-shadow(0 24px 30px rgba(22, 21, 15, 0.22));
 }
 .hero__cutout-fallback {
+  align-self: center;
   font-family: var(--serif);
   font-size: clamp(5rem, 16vw, 9rem);
   color: var(--muted);
@@ -465,9 +471,9 @@ p {
 .hero__ringwrap {
   position: absolute;
   z-index: 3;
-  left: 2%;
-  bottom: 18%;
-  width: clamp(90px, 11vw, 126px);
+  left: -10%;
+  bottom: 12%;
+  width: clamp(82px, 9vw, 112px);
   aspect-ratio: 1;
 }
 .hero__ring {
@@ -488,7 +494,7 @@ p {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: var(--accent);
 }
 @keyframes spin {
@@ -503,29 +509,29 @@ p {
   width: 12px;
   height: 12px;
   background: var(--accent);
-  top: 14%;
-  right: 12%;
+  top: 8%;
+  right: 2%;
   animation: heroFloat 6s ease-in-out infinite;
 }
 .hero__dot--2 {
   width: 8px;
   height: 8px;
   background: var(--ink);
-  top: 32%;
-  left: 6%;
+  top: 26%;
+  left: 0;
   animation: heroFloat 7s ease-in-out infinite 0.5s;
 }
 .hero__dot--3 {
   width: 14px;
   height: 14px;
   border: 1.5px solid var(--ink);
-  top: 52%;
-  right: 4%;
+  top: 46%;
+  right: -2%;
   animation: heroFloat 8s ease-in-out infinite 1s;
 }
 @keyframes heroFloat {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-16px); }
+  50% { transform: translateY(-14px); }
 }
 
 /* About facts */
@@ -563,13 +569,13 @@ p {
     min-height: auto;
     margin-top: 0.5rem;
   }
-  .hero__cutout {
-    max-width: 250px;
+  .hero__stage {
+    max-width: 200px;
   }
   .hero__ringwrap {
-    width: 78px;
-    left: 0;
-    bottom: 10%;
+    width: 70px;
+    left: -14%;
+    bottom: 8%;
   }
   .hero__title {
     font-size: clamp(2.6rem, 12vw, 4rem);
