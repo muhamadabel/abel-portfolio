@@ -16,8 +16,8 @@ export const profile = {
     'Frontend developer yang suka memperhatikan detail sampai rapi. Sehari-hari memakai React, Next.js, dan Laravel untuk membangun sistem yang nyaman dipakai dan mudah dirawat.',
     'Buat aku, hasil yang baik itu bukan cuma jalan, tapi juga enak dilihat dan gampang dirawat. Aku senang mengurus hal-hal kecil yang sering kelewat, dari rapinya struktur kode sampai detail kecil di tampilan.',
   ],
-  // Taruh foto di public/profile.jpg (kalau belum ada, otomatis tampil inisial).
-  photo: '/profile.jpg',
+  // Cutout transparan di public/profile.png (background sudah dihapus).
+  photo: '/profile.png',
   initials: 'MA',
 }
 

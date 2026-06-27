@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Magnetic from './Magnetic'
 import { profile } from '../data/content'
@@ -21,18 +21,41 @@ const fade = {
   }),
 }
 
-function Portrait({ ready }) {
-  // Foto asli kamu di public/profile.jpg. Sebelum ada, tampil inisial.
+function Visual({ ready }) {
   const [loaded, setLoaded] = useState(false)
   return (
     <motion.div
-      className="hero__portrait"
-      initial={{ opacity: 0, scale: 0.96 }}
-      animate={ready ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.96 }}
-      transition={{ duration: 1, delay: 0.45, ease: [0.16, 1, 0.3, 1] }}
+      className="hero__visual"
+      initial={{ opacity: 0 }}
+      animate={ready ? { opacity: 1 } : { opacity: 0 }}
+      transition={{ duration: 1, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
     >
-      <span className="hero__portrait-accent" aria-hidden="true" />
-      <div className="hero__portrait-card">
+      <span className="hero__glow" aria-hidden="true" />
+
+      <span className="hero__ringwrap" aria-hidden="true">
+        <svg className="hero__ring" viewBox="0 0 200 200">
+          <defs>
+            <path id="heroRingPath" d="M100,100 m-72,0 a72,72 0 1,1 144,0 a72,72 0 1,1 -144,0" fill="none" />
+          </defs>
+          <text>
+            <textPath href="#heroRingPath">
+              MUHAMMAD ABEL ABHINAYA · FRONTEND DEVELOPER ·&nbsp;
+            </textPath>
+          </text>
+        </svg>
+        <span className="hero__ring-icon">↓</span>
+      </span>
+
+      <span className="hero__dot hero__dot--1" aria-hidden="true" />
+      <span className="hero__dot hero__dot--2" aria-hidden="true" />
+      <span className="hero__dot hero__dot--3" aria-hidden="true" />
+
+      <motion.div
+        className="hero__cutout"
+        initial={{ y: 28, opacity: 0 }}
+        animate={ready ? { y: 0, opacity: 1 } : { y: 28, opacity: 0 }}
+        transition={{ duration: 1.1, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      >
         <img
           src={profile.photo}
           alt={`Foto ${profile.name}`}
@@ -41,30 +64,17 @@ function Portrait({ ready }) {
           onError={() => setLoaded(false)}
         />
         {!loaded && (
-          <div className="fallback" aria-hidden="true">
+          <span className="hero__cutout-fallback" aria-hidden="true">
             {profile.initials}
-          </div>
+          </span>
         )}
-      </div>
+      </motion.div>
     </motion.div>
   )
 }
 
 export default function Hero({ ready }) {
   const state = ready ? 'show' : 'hidden'
-  const tiltRef = useRef(null)
-
-  const onMove = (e) => {
-    const el = tiltRef.current
-    if (!el) return
-    const r = el.getBoundingClientRect()
-    const px = (e.clientX - r.left) / r.width - 0.5
-    const py = (e.clientY - r.top) / r.height - 0.5
-    el.style.transform = `perspective(900px) rotateY(${px * 6}deg) rotateX(${-py * 6}deg)`
-  }
-  const onLeave = () => {
-    if (tiltRef.current) tiltRef.current.style.transform = 'perspective(900px) rotateY(0deg) rotateX(0deg)'
-  }
 
   return (
     <section id="home" className="hero">
@@ -115,9 +125,7 @@ export default function Hero({ ready }) {
           </motion.div>
         </div>
 
-        <div className="hero__portrait-wrap" ref={tiltRef} onMouseMove={onMove} onMouseLeave={onLeave}>
-          <Portrait ready={ready} />
-        </div>
+        <Visual ready={ready} />
       </div>
 
       <div className="hero__scroll" aria-hidden="true">
