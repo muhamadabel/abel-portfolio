@@ -30,7 +30,7 @@ export const contact = {
     url: 'https://www.linkedin.com/in/muhammad-abel-abhinaya-riananto-944376326/',
   },
   instagram: { label: 'Instagram', handle: '@mhmmdabel._', url: 'https://instagram.com/mhmmdabel._' },
-  cv: '', // TODO: link CV (PDF), kosongkan kalau belum ada
+  cv: '/cv-muhammad-abel-abhinaya.pdf',
 }
 
 export const skills = [
@@ -89,8 +89,8 @@ export const projects = [
 
 export const education = {
   school: 'Universitas Gadjah Mada',
-  program: 'Program Sarjana', // TODO: ganti dengan jurusan asli
-  period: '2022 sampai sekarang', // TODO: konfirmasi tahun
+  program: 'Teknologi Rekayasa Perangkat Lunak',
+  period: '2022 sampai sekarang', // TODO: konfirmasi tahun masuk
 }
 
 export const stats = [
