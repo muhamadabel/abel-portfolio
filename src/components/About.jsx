@@ -1,30 +1,12 @@
-import { useState } from 'react'
 import Reveal from './Reveal'
-import { profile, stats } from '../data/content'
+import { profile, education } from '../data/content'
 
-function Photo() {
-  // Tampilkan inisial sampai ada foto asli yang benar-benar termuat.
-  // Begitu kamu taruh public/profile.jpg, fotonya otomatis muncul.
-  const [loaded, setLoaded] = useState(false)
-  return (
-    <figure className="about__photo">
-      <img
-        src={profile.photo}
-        alt={`Foto ${profile.name}`}
-        loading="lazy"
-        style={{ opacity: loaded ? 1 : 0 }}
-        onLoad={(e) => setLoaded(e.currentTarget.naturalWidth > 1)}
-        onError={() => setLoaded(false)}
-      />
-      {!loaded && (
-        <div className="fallback" aria-hidden="true">
-          {profile.initials}
-        </div>
-      )}
-      <figcaption>{profile.name}</figcaption>
-    </figure>
-  )
-}
+const facts = [
+  { k: 'Lokasi', v: profile.location },
+  { k: 'Fokus', v: 'React, Next.js, Laravel' },
+  { k: 'Pendidikan', v: `${education.program}, UGM` },
+  { k: 'Angka keberuntungan', v: '21' },
+]
 
 export default function About() {
   return (
@@ -42,19 +24,17 @@ export default function About() {
                 {para}
               </Reveal>
             ))}
-
-            <div className="stats">
-              {stats.map((s, i) => (
-                <Reveal className="stat" key={s.label} delay={i * 0.06}>
-                  <div className="stat__value">{s.value}</div>
-                  <div className="stat__label">{s.label}</div>
-                </Reveal>
-              ))}
-            </div>
           </div>
 
-          <Reveal delay={0.1}>
-            <Photo />
+          <Reveal className="about__facts" delay={0.1}>
+            <ul className="facts">
+              {facts.map((f) => (
+                <li className="fact" key={f.k}>
+                  <span className="fact__k">{f.k}</span>
+                  <span className="fact__v">{f.v}</span>
+                </li>
+              ))}
+            </ul>
           </Reveal>
         </div>
       </div>
