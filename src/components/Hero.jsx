@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import Scene3D from './Scene3D'
+import Magnetic from './Magnetic'
 import { profile } from '../data/content'
 import { scrollTo } from '../lib/smoothScroll'
 
@@ -7,7 +8,7 @@ const line = {
   hidden: { y: '115%' },
   show: (i) => ({
     y: 0,
-    transition: { duration: 0.95, delay: 0.15 + i * 0.12, ease: [0.16, 1, 0.3, 1] },
+    transition: { duration: 0.95, delay: 0.05 + i * 0.12, ease: [0.16, 1, 0.3, 1] },
   }),
 }
 
@@ -16,11 +17,13 @@ const fade = {
   show: (i) => ({
     opacity: 1,
     y: 0,
-    transition: { duration: 0.8, delay: 0.55 + i * 0.12, ease: [0.16, 1, 0.3, 1] },
+    transition: { duration: 0.8, delay: 0.45 + i * 0.12, ease: [0.16, 1, 0.3, 1] },
   }),
 }
 
-export default function Hero() {
+export default function Hero({ ready }) {
+  const state = ready ? 'show' : 'hidden'
+
   return (
     <section id="home" className="hero">
       <div className="hero__scene">
@@ -28,13 +31,7 @@ export default function Hero() {
       </div>
 
       <div className="container hero__inner">
-        <motion.div
-          className="hero__eyebrow"
-          variants={fade}
-          custom={0}
-          initial="hidden"
-          animate="show"
-        >
+        <motion.div className="hero__eyebrow" variants={fade} custom={0} initial="hidden" animate={state}>
           <span className="pill">
             <span className="live-dot" />
             {profile.availableText}
@@ -46,24 +43,24 @@ export default function Hero() {
 
         <h1 className="hero__title display" aria-label={profile.tagline}>
           <span className="line">
-            <motion.span variants={line} custom={0} initial="hidden" animate="show" style={{ display: 'inline-block' }}>
+            <motion.span variants={line} custom={0} initial="hidden" animate={state} style={{ display: 'inline-block' }}>
               Everyone
             </motion.span>
           </span>
           <span className="line">
-            <motion.span variants={line} custom={1} initial="hidden" animate="show" style={{ display: 'inline-block' }}>
+            <motion.span variants={line} custom={1} initial="hidden" animate={state} style={{ display: 'inline-block' }}>
               love <span className="accent">clean</span>
             </motion.span>
           </span>
           <span className="line">
-            <motion.span variants={line} custom={2} initial="hidden" animate="show" style={{ display: 'inline-block' }}>
+            <motion.span variants={line} custom={2} initial="hidden" animate={state} style={{ display: 'inline-block' }}>
               things.
             </motion.span>
           </span>
         </h1>
 
         <div className="hero__meta">
-          <motion.div variants={fade} custom={1} initial="hidden" animate="show">
+          <motion.div variants={fade} custom={1} initial="hidden" animate={state}>
             <span className="eyebrow" style={{ display: 'block', marginBottom: '0.7rem' }}>
               {profile.location}
             </span>
@@ -72,19 +69,17 @@ export default function Hero() {
             </p>
           </motion.div>
 
-          <motion.div
-            className="hero__actions"
-            variants={fade}
-            custom={2}
-            initial="hidden"
-            animate="show"
-          >
-            <button className="btn btn--solid" onClick={() => scrollTo('#work')} data-hover>
-              Lihat karya <span className="arrow">↗</span>
-            </button>
-            <button className="btn btn--ghost" onClick={() => scrollTo('#contact')} data-hover>
-              Kontak
-            </button>
+          <motion.div className="hero__actions" variants={fade} custom={2} initial="hidden" animate={state}>
+            <Magnetic>
+              <button className="btn btn--solid" onClick={() => scrollTo('#work')} data-hover>
+                Lihat karya <span className="arrow">↗</span>
+              </button>
+            </Magnetic>
+            <Magnetic>
+              <button className="btn btn--ghost" onClick={() => scrollTo('#contact')} data-hover>
+                Kontak
+              </button>
+            </Magnetic>
           </motion.div>
         </div>
       </div>

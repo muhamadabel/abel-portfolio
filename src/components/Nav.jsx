@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { profile, sections } from '../data/content'
 import { scrollTo } from '../lib/smoothScroll'
 import { useScrollSpy, useScrolled } from '../hooks/useScrollSpy'
+import Clock from './Clock'
 
 const IDS = sections.map((s) => s.id)
 
@@ -23,6 +24,8 @@ export default function Nav() {
           {profile.display}
           <span className="dot" />
         </a>
+
+        <Clock />
 
         <nav className={`nav__links ${open ? 'is-open' : ''}`} aria-label="Navigasi utama">
           {sections

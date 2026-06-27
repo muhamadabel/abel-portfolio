@@ -1,9 +1,9 @@
 import { Suspense, useEffect, useRef, Component } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
-import { MeshDistortMaterial } from '@react-three/drei'
+import { Environment, Lightformer, MeshDistortMaterial, Float } from '@react-three/drei'
 import * as THREE from 'three'
 
-// Kalau WebGL gagal di perangkat tertentu, jangan sampai halaman ikut error.
+// Kalau WebGL gagal di perangkat tertentu, halaman tetap jalan.
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props)
@@ -12,19 +12,25 @@ class ErrorBoundary extends Component {
   static getDerivedStateFromError() {
     return { failed: true }
   }
+  componentDidCatch(error) {
+    if (typeof window !== 'undefined') {
+      window.__sceneErr = (error && (error.stack || error.message)) || String(error)
+      // eslint-disable-next-line no-console
+      console.error('Scene3D error:', error)
+    }
+  }
   render() {
-    if (this.state.failed) return null
-    return this.props.children
+    return this.state.failed ? null : this.props.children
   }
 }
 
-function Blob() {
+const REDUCE =
+  typeof window !== 'undefined' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function ChromeForm() {
   const mesh = useRef(null)
   const mouse = useRef({ x: 0, y: 0 })
-  const reduce = useRef(
-    typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  )
 
   useEffect(() => {
     const onMove = (e) => {
@@ -40,32 +46,41 @@ function Blob() {
     if (!m) return
     const w = state.viewport.width
     const compact = w < 7
-    const baseX = compact ? 0 : w * 0.22
-    const baseY = compact ? 0.4 : 0
+    const baseX = compact ? 0 : w * 0.19
+    const baseY = compact ? 0.5 : 0
+    const d = Math.min(delta, 0.05)
 
-    m.position.x = THREE.MathUtils.lerp(m.position.x, baseX + mouse.current.x * 0.4, 0.05)
-    m.position.y = THREE.MathUtils.lerp(m.position.y, baseY + mouse.current.y * 0.4, 0.05)
+    m.position.x = THREE.MathUtils.damp(m.position.x, baseX + mouse.current.x * 0.45, 3, d)
+    m.position.y = THREE.MathUtils.damp(m.position.y, baseY + mouse.current.y * 0.45, 3, d)
 
-    const target = compact ? 1.35 : 1.95
-    m.scale.setScalar(THREE.MathUtils.lerp(m.scale.x, target, 0.08))
+    const target = compact ? 1.25 : 1.75
+    m.scale.setScalar(THREE.MathUtils.damp(m.scale.x, target, 4, d))
 
-    if (!reduce.current) {
-      m.rotation.y += delta * 0.18
-      m.rotation.x = Math.sin(state.clock.elapsedTime * 0.3) * 0.16
+    if (!REDUCE) {
+      m.rotation.y += d * 0.2
+      m.rotation.x = THREE.MathUtils.damp(m.rotation.x, mouse.current.y * 0.35, 3, d)
     }
   })
 
-  return (
+  const inner = (
     <mesh ref={mesh} scale={0.001}>
-      <sphereGeometry args={[1, 64, 64]} />
+      <sphereGeometry args={[1, 96, 96]} />
       <MeshDistortMaterial
-        color="#c2693f"
-        distort={reduce.current ? 0 : 0.32}
-        speed={1.5}
-        roughness={0.38}
-        metalness={0.06}
+        color="#0c0c0d"
+        metalness={1}
+        roughness={0.16}
+        distort={REDUCE ? 0 : 0.3}
+        speed={1.3}
+        envMapIntensity={1.6}
       />
     </mesh>
+  )
+
+  if (REDUCE) return inner
+  return (
+    <Float speed={1.1} rotationIntensity={0.35} floatIntensity={1.2}>
+      {inner}
+    </Float>
   )
 }
 
@@ -73,16 +88,37 @@ export default function Scene3D() {
   return (
     <ErrorBoundary>
       <Canvas
-        dpr={[1, 1.8]}
-        camera={{ position: [0, 0, 6], fov: 34 }}
+        dpr={[1, 2]}
+        camera={{ position: [0, 0, 5.2], fov: 38 }}
         gl={{ antialias: true, alpha: true }}
         style={{ pointerEvents: 'none' }}
       >
-        <ambientLight intensity={0.75} />
-        <directionalLight position={[4, 6, 5]} intensity={1.4} />
-        <directionalLight position={[-6, -3, -4]} intensity={0.5} color="#ffd9c0" />
+        <ambientLight intensity={0.35} />
         <Suspense fallback={null}>
-          <Blob />
+          <ChromeForm />
+          {/* Studio reflections tanpa file HDRI eksternal, dibaked sekali biar ringan */}
+          <Environment resolution={256} frames={1}>
+            <color attach="background" args={['#090909']} />
+            <Lightformer form="rect" intensity={3.2} position={[0, 2.6, 3]} scale={[9, 3, 1]} color="#ffffff" />
+            <Lightformer form="rect" intensity={1.7} position={[-4, -1, 2]} scale={[5, 5, 1]} color="#ffd6bb" />
+            <Lightformer form="ring" intensity={2.2} position={[4, 2.5, -3]} scale={4} color="#b4552d" />
+            <Lightformer
+              form="rect"
+              intensity={2.4}
+              rotation-y={Math.PI / 2}
+              position={[-6, 1, 0]}
+              scale={[18, 1.6, 1]}
+              color="#ffffff"
+            />
+            <Lightformer
+              form="rect"
+              intensity={2.4}
+              rotation-y={Math.PI / 2}
+              position={[6, -1.5, 0]}
+              scale={[18, 1.6, 1]}
+              color="#cfe0ff"
+            />
+          </Environment>
         </Suspense>
       </Canvas>
     </ErrorBoundary>
