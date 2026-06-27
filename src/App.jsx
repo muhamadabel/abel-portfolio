@@ -1,0 +1,34 @@
+import { motion, useScroll, useSpring } from 'framer-motion'
+import { useSmoothScroll } from './lib/smoothScroll'
+import Cursor from './components/Cursor'
+import Nav from './components/Nav'
+import Hero from './components/Hero'
+import About from './components/About'
+import Skills from './components/Skills'
+import Projects from './components/Projects'
+import Education from './components/Education'
+import Contact from './components/Contact'
+import Footer from './components/Footer'
+
+export default function App() {
+  useSmoothScroll()
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, { stiffness: 140, damping: 30, mass: 0.4 })
+
+  return (
+    <>
+      <Cursor />
+      <motion.div className="scroll-progress" style={{ width: '100%', scaleX }} aria-hidden="true" />
+      <Nav />
+      <main>
+        <Hero />
+        <About />
+        <Skills />
+        <Projects />
+        <Education />
+        <Contact />
+      </main>
+      <Footer />
+    </>
+  )
+}
