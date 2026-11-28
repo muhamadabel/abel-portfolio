@@ -67,7 +67,7 @@ export default function Nav({ ready }) {
           <span className="nav__mark">
             <picture>
               <source srcSet="/logo-a.webp" type="image/webp" />
-              <img src="/logo-a.png" alt="Logo Abel Abhinaya" decoding="async" />
+              <img src="/logo-a.png" alt="Logo Abel Abhinaya" width="28" height="18" decoding="async" />
             </picture>
           </span>
           <span className="nav__name">{profile.display}</span>

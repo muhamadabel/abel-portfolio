@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useAnimationFrame, useReducedMotion } from 'framer-motion'
 import { affiliations } from '../data/content'
+import { toWebpSrc } from '../lib/projectImage'
 
 export default function TechMarquee() {
   const sectionRef = useRef(null)
@@ -67,29 +68,36 @@ export default function TechMarquee() {
               <div className="lmarq__item" key={`${dup}-${item.id}`} title={item.name}>
                 {item.kind === 'lockup' ? (
                   <div className="lmarq__lockup">
-                    <img
-                      src={item.logo}
-                      alt={dup === 0 ? item.name : ''}
-                      className="lmarq__img lmarq__img--emblem"
-                      loading="lazy"
-                      decoding="async"
-                      draggable="false"
-                    />
+                    <picture className="pic-contents">
+                      <source srcSet={toWebpSrc(item.logo)} type="image/webp" />
+                      <img
+                        src={item.logo}
+                        alt={dup === 0 ? item.name : ''}
+                        className="lmarq__img lmarq__img--emblem"
+                        width="32"
+                        height="32"
+                        decoding="async"
+                        draggable="false"
+                      />
+                    </picture>
                     <span className="lmarq__text">
                       <strong>{item.label}</strong>
                       <span>{item.sub}</span>
                     </span>
                   </div>
                 ) : (
-                  <img
-                    src={item.logo}
-                    alt={dup === 0 ? item.name : ''}
-                    className="lmarq__img lmarq__img--wordmark"
-                    style={item.scale ? { '--logo-scale': item.scale } : undefined}
-                    loading="lazy"
-                    decoding="async"
-                    draggable="false"
-                  />
+                  <picture className="pic-contents">
+                    <source srcSet={toWebpSrc(item.logo)} type="image/webp" />
+                    <img
+                      src={item.logo}
+                      alt={dup === 0 ? item.name : ''}
+                      className="lmarq__img lmarq__img--wordmark"
+                      style={item.scale ? { '--logo-scale': item.scale } : undefined}
+                      height="26"
+                      decoding="async"
+                      draggable="false"
+                    />
+                  </picture>
                 )}
               </div>
             ))}

@@ -508,10 +508,14 @@ export default function CurvedProjectLens({ items, warm = true, ready = true, se
           <a
             href={active.live || active.repo}
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
             className="lens-stage__fallback"
           >
-            <img src={active.image} alt={active.title} />
+            <picture className="pic-contents">
+              <source media="(max-width: 639px)" srcSet={projectImageSrc(active.image, true)} type="image/webp" />
+              <source srcSet={projectImageSrc(active.image, false)} type="image/webp" />
+              <img src={active.image} alt={`Pratinjau proyek ${active.title}`} width="1024" height="640" decoding="async" />
+            </picture>
           </a>
         ) : (
           <canvas ref={canvasRef} className="lens-stage__canvas" />

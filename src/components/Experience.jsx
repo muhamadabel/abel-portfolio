@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion'
 import { achievements, education, organizations, profile } from '../data/content'
 import { cardReveal, ease, stagger, viewportOnce } from '../lib/motion'
+import { toWebpSrc } from '../lib/projectImage'
 import SectionHead from './SectionHead'
 
 const ORG_META = {
@@ -39,7 +40,15 @@ function PortraitCard({ reduceMotion }) {
       <div className="xpb__portrait-media">
         <picture>
           <source srcSet="/profile.webp" type="image/webp" />
-          <img src={profile.photo} alt={profile.name} loading="lazy" decoding="async" draggable="false" />
+          <img
+            src={profile.photo}
+            alt={profile.name}
+            width="680"
+            height="670"
+            loading="lazy"
+            decoding="async"
+            draggable="false"
+          />
         </picture>
       </div>
       <div className="xpb__portrait-plate">
@@ -120,19 +129,26 @@ export default function Experience() {
                   transition={reduceMotion ? { duration: 0 } : { duration: 0.34, ease }}
                 >
                   {orgVisual.logo && (
-                    <img
-                      src={orgVisual.logo}
-                      alt=""
-                      aria-hidden="true"
-                      className="xpb__org-watermark"
-                      draggable="false"
-                    />
+                    <picture className="pic-contents">
+                      <source srcSet={toWebpSrc(orgVisual.logo)} type="image/webp" />
+                      <img
+                        src={orgVisual.logo}
+                        alt=""
+                        aria-hidden="true"
+                        className="xpb__org-watermark"
+                        decoding="async"
+                        draggable="false"
+                      />
+                    </picture>
                   )}
 
                   <div className="xpb__org-meta">
                     {orgVisual.logo && (
                       <span className="xpb__org-emblem" aria-hidden="true">
-                        <img src={orgVisual.logo} alt="" draggable="false" />
+                        <picture className="pic-contents">
+                          <source srcSet={toWebpSrc(orgVisual.logo)} type="image/webp" />
+                          <img src={orgVisual.logo} alt="" width="24" height="24" decoding="async" draggable="false" />
+                        </picture>
                       </span>
                     )}
                     <span className="xpb__org-name">{org.org}</span>
@@ -259,16 +275,22 @@ export default function Experience() {
                     <a
                       href={award.certPdf || award.certImage}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noopener noreferrer"
                       className="xpb__cert"
                       aria-label={`Lihat sertifikat resmi ${award.title}`}
                     >
-                      <img
-                        src={award.certImage}
-                        alt={award.certAlt || `Sertifikat ${award.title}`}
-                        loading="lazy"
-                        draggable="false"
-                      />
+                      <picture className="pic-contents">
+                        <source srcSet={toWebpSrc(award.certImage)} type="image/webp" />
+                        <img
+                          src={award.certImage}
+                          alt={award.certAlt || `Sertifikat ${award.title}`}
+                          width="720"
+                          height="510"
+                          loading="lazy"
+                          decoding="async"
+                          draggable="false"
+                        />
+                      </picture>
                     </a>
                   )}
                 </motion.div>
@@ -296,13 +318,18 @@ export default function Experience() {
                   >
                     <div className="xpb__edu-top">
                       {eduLogo && (
-                        <img
-                          src={eduLogo.src}
-                          alt=""
-                          aria-hidden="true"
-                          className={`xpb__edu-logo${eduLogo.kind === 'crest' ? ' xpb__edu-logo--crest' : ''}`}
-                          draggable="false"
-                        />
+                        <picture className="pic-contents">
+                          <source srcSet={toWebpSrc(eduLogo.src)} type="image/webp" />
+                          <img
+                            src={eduLogo.src}
+                            alt=""
+                            aria-hidden="true"
+                            className={`xpb__edu-logo${eduLogo.kind === 'crest' ? ' xpb__edu-logo--crest' : ''}`}
+                            height={eduLogo.kind === 'crest' ? 26 : 20}
+                            decoding="async"
+                            draggable="false"
+                          />
+                        </picture>
                       )}
                       <span className="xpb__edu-period">{e.period}</span>
                     </div>

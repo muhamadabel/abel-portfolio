@@ -5,7 +5,7 @@
 >
   <url>
     <loc>https://www.akuabel.my.id/</loc>
-    <lastmod>2026-11-24</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
     <image:image>
@@ -13,13 +13,53 @@
       <image:title>Abel Abhinaya - Software Engineer Portfolio</image:title>
     </image:image>
     <image:image>
+      <image:loc>https://www.akuabel.my.id/logo-a.png</image:loc>
+      <image:title>Logo Abel Abhinaya</image:title>
+    </image:image>
+    <image:image>
       <image:loc>https://www.akuabel.my.id/profile.png</image:loc>
       <image:title>Muhammad Abel Abhinaya Riananto</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.akuabel.my.id/projects/desiltrace.jpg</image:loc>
+      <image:title>Desiltrace - Platform Transparansi Desil Yogyakarta</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.akuabel.my.id/projects/surveymeter.jpg</image:loc>
+      <image:title>SurveyMETER Redesign - Situs Lembaga Riset Dua Bahasa</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.akuabel.my.id/projects/simonev.jpg</image:loc>
+      <image:title>Simonev Renaksi - Sistem Monitoring dan Evaluasi BBPPKS Yogyakarta</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.akuabel.my.id/projects/pemilwa.jpg</image:loc>
+      <image:title>Pemilwa KMTEDI - Platform Pemilihan Mahasiswa KMTEDI SV UGM</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.akuabel.my.id/projects/hongfilms.jpg</image:loc>
+      <image:title>Hongfilms - Platform Ekosistem Perfilman Independen</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.akuabel.my.id/projects/rongsokin.jpg</image:loc>
+      <image:title>Rongsok.in - Marketplace Daur Ulang Sampah Berbasis Geolokasi</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.akuabel.my.id/projects/somnia.jpg</image:loc>
+      <image:title>Somnia - Aplikasi Web Modular Next.js dan TypeScript</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.akuabel.my.id/projects/simpondok.jpg</image:loc>
+      <image:title>Simpondok - Sistem Informasi Manajemen Pondok Pesantren Tahfidz</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://www.akuabel.my.id/projects/tna-sekolah-rakyat.jpg</image:loc>
+      <image:title>TNA Sekolah Rakyat - Sistem Survei Kebutuhan Pelatihan BBPPKS Yogyakarta</image:title>
     </image:image>
   </url>
   <url>
     <loc>https://www.akuabel.my.id/cv-muhammad-abel-abhinaya.pdf</loc>
-    <lastmod>2026-11-24</lastmod>
+    <lastmod>2026-11-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>

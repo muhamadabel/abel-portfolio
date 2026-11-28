@@ -170,7 +170,9 @@ export default function FocusDeck() {
                             <source srcSet={projectImageSrc(card.previews[0].image, false)} type="image/webp" />
                             <img
                               src={card.previews[0].image}
-                              alt={card.previews[0].title}
+                              alt={`Pratinjau proyek ${card.previews[0].title}`}
+                              width="1024"
+                              height="640"
                               loading="lazy"
                               decoding="async"
                               draggable="false"
@@ -224,7 +226,9 @@ export default function FocusDeck() {
                             <source srcSet={projectImageSrc(card.previews[1].image, false)} type="image/webp" />
                             <img
                               src={card.previews[1].image}
-                              alt={card.previews[1].title}
+                              alt={`Pratinjau proyek ${card.previews[1].title}`}
+                              width="1024"
+                              height="640"
                               loading="lazy"
                               decoding="async"
                               draggable="false"

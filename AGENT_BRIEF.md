@@ -69,11 +69,10 @@ Komposisi halaman diatur di `src/App.jsx` dalam `<MotionConfig reducedMotion="us
 
 ### Urutan Render Aktif (`src/App.jsx`)
 
-1. **`Preloader.jsx` (eager, tampil sampai `ready === true`)**
-   - WebGL 3D globe berisi 9 screenshot proyek (`LATITUDES`) yang berputar ke kanan dan berhenti menghadap proyek utama (`Desiltrace`, indeks `0`), lalu membuka halus menjadi posisi carousel 3D di Hero.
-   - Di dalam inti globe terdapat logo 3D metalik transparan `/logo-a.webp` (`showInsideGlobe`, di-sort kedalaman `z` sehingga berada di dalam globe). Pada fase `CROUCH_START -> LAUNCH_AT`, logo mengisi daya lalu melesat vertikal dari belakang kartu `Desiltrace` dengan jejak roket pada kanvas `preloader__rocket` (`z-index: 1`).
-   - Bersamaan saat `PARTICLE_START`, teks pengapit `"Abel"` & `"Abhinaya."` larut menjadi ribuan titik (`sampleWordPixels` -> `sampleParticleTitle` di `src/lib/particleLayout.js`) membentuk H1 partikel Hero. Ketika roket `"A"` menembus ke atas melewati titik-titik `"Abel Abhinaya"`, partikel terdorong aerodinamis dengan kilau biru kobalt lalu membal kembali ke bentuk huruf sebelum preloader selesai (`TOTAL_END`: `2.24s` mobile compact, `3.12s` desktop).
-   - **Penting:** Koordinat pendaratan kartu globe & titik huruf disinkronkan subpiksel dengan `.lens-stage__canvas` dan `.particle-title` di Hero melalui `heroCardSize()` + `src/lib/particleLayout.js`.
+1. **`Preloader.jsx` (eager, 2 tahap, tampil sampai `ready === true`)**
+   - **Tahap 1 (`phase === 'loading'`):** Loading screen bersih berlogo metalik **A** (`/logo-a.webp`) di tengah layar dengan bar progres tipis & persentase (`0% - 100%`). Melalui `src/lib/assetPreloader.js` dan `preloadCachedImage()` di `src/lib/projectImage.js`, tahap ini memuat & men-decode seluruh aset penting situs (logo A, 9 thumbnail proyek WebP sesuai viewport, font `Inter`/`Inter Tight`, 6 chunk JS lazy section, `/profile.webp`, 11 logo, dan 2 sertifikat). Durasi menyesuaikan kecepatan jaringan/perangkat: minimal ~`1,5` detik di jaringan cepat, dan menunggu otomatis sampai seluruh aset selesai di jaringan lambat (batas pengaman `9` detik).
+   - **Tahap 2 (`phase === 'globe'`):** Setelah seluruh aset siap di cache memori, WebGL 3D globe langsung mekar mengelilingi logo **A** tanpa satu pun kartu abu-abu (`getCachedImage()` sinkron pada frame 0), berputar ke kanan berhenti di `Desiltrace` (indeks `0`), membuka ke carousel 3D Hero, lalu logo **A** melesat dari belakang kartu menembus partikel nama `"Abel Abhinaya"`.
+   - **Penting:** Ukuran logo Stage 1 (`computeCoreLogoWidth`) identik dengan logo WebGL Stage 2, dan koordinat pendaratan kartu globe & titik huruf disinkronkan subpiksel dengan `.lens-stage__canvas` dan `.particle-title` melalui `heroCardSize()` + `src/lib/particleLayout.js`.
 
 2. **`Nav.jsx` (eager)**
    - Pil melayang `LiquidGlass.jsx` (refraksi SVG optik di Chromium desktop; fallback frosted glass di Safari/mobile/reduced transparency). Auto-hide saat scroll turun (`y > 540`) dan muncul lagi saat scroll naik.

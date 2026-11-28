@@ -6,12 +6,21 @@ import Nav from './components/Nav'
 import Hero from './components/Hero'
 import TechMarquee from './components/TechMarquee'
 
-const FocusDeck = lazy(() => import('./components/FocusDeck'))
-const Experience = lazy(() => import('./components/Experience'))
-const Skills = lazy(() => import('./components/Skills'))
-const CVPreview = lazy(() => import('./components/CVPreview'))
-const Contact = lazy(() => import('./components/Contact'))
-const Footer = lazy(() => import('./components/Footer'))
+const loadFocusDeck = () => import('./components/FocusDeck')
+const loadExperience = () => import('./components/Experience')
+const loadSkills = () => import('./components/Skills')
+const loadCVPreview = () => import('./components/CVPreview')
+const loadContact = () => import('./components/Contact')
+const loadFooter = () => import('./components/Footer')
+
+const chunkLoaders = [loadFocusDeck, loadExperience, loadSkills, loadCVPreview, loadContact, loadFooter]
+
+const FocusDeck = lazy(loadFocusDeck)
+const Experience = lazy(loadExperience)
+const Skills = lazy(loadSkills)
+const CVPreview = lazy(loadCVPreview)
+const Contact = lazy(loadContact)
+const Footer = lazy(loadFooter)
 
 export default function App() {
   useSmoothScroll()
@@ -22,6 +31,7 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       {!ready && (
         <Preloader
+          chunkLoaders={chunkLoaders}
           onReveal={() => setReveal(true)}
           onDone={() => {
             setReveal(true)

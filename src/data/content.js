@@ -16,7 +16,6 @@ export const profile = {
   available: true,
   availableText: 'Available for work',
   photo: '/profile.png',
-  avatar: '/avatar.png',
   initials: 'MA',
   birthDate: '17 Juni 2006',
   address: 'Pandes RT02, Panggungharjo, Sewon, Bantul',

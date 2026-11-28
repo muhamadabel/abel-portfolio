@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { profile, projects } from '../data/content'
+import { preloadSiteAssets } from '../lib/assetPreloader'
 import { getParticleDpr, particleDotRadius, sampleParticleTitle, sampleWordPixels } from '../lib/particleLayout'
-import { loadCachedImage, projectImageSrc } from '../lib/projectImage'
+import { getCachedImage, loadCachedImage, projectImageSrc } from '../lib/projectImage'
 
 const TAU = Math.PI * 2
 const P_BUCKETS = 4
@@ -13,6 +14,28 @@ const rightWord = nameParts.length > 1 ? `${nameParts.slice(1).join(' ')}.` : ''
 
 // Distribusi lintang 3D supaya 9 proyek membentuk bola/globe utuh, namun 3 kartu utama tetap harmonis saat membuka
 const LATITUDES = [0.0, 0.34, -0.34, 0.42, -0.40, 0.36, -0.38, 0.28, -0.26]
+
+function computeGlobeRadius(w, h) {
+  return Math.min(w * (w < 640 ? 0.46 : 0.34), h * (w < 640 ? 0.34 : 0.42), 400)
+}
+
+function computeCoreLogoWidth(w, h) {
+  return Math.max(76, Math.min(156, computeGlobeRadius(w, h) * 0.45))
+}
+
+const RING_R = 49.5
+const RING_CIRC = 2 * Math.PI * RING_R
+
+function computeRingMetrics(w, h) {
+  const logoPx = computeCoreLogoWidth(w, h)
+  const ringPx = Math.round(logoPx * 1.84)
+  const orbitPx = Math.min(w * 0.88, 760)
+  const initScale = Math.min(0.85, Math.max(0.22, ringPx / Math.max(1, orbitPx)))
+  // Ketebalan stroke dalam satuan viewBox (0..100) agar tetap tipis 1.8px saat loading -> 1.1px saat mengembang penuh
+  const strokeInit = +(180 / Math.max(1, ringPx)).toFixed(3)
+  const strokeEnd = +(110 / Math.max(1, orbitPx)).toFixed(3)
+  return { logoPx, ringPx, orbitPx, initScale, strokeInit, strokeEnd }
+}
 
 function wrap(i, n) {
   return n > 0 ? ((i % n) + n) % n : 0
@@ -65,15 +88,16 @@ varying float vDepth;
 varying float vMorph;
 
 void main() {
-  // 1. Posisi 3D melengkung pada permukaan bola/globe (muter ke kanan)
-  float lon = uLon + (aPos.x - 0.5) * uPatchAng.x;
-  float lat = uLat + (aPos.y - 0.5) * uPatchAng.y;
+  // 1. Posisi 3D melengkung pada permukaan bola/globe (mekar keluar dari inti logo A lalu memutar ke kanan)
+  float patchScale = mix(0.26, 1.0, uIntro);
+  float lon = uLon + (aPos.x - 0.5) * (uPatchAng.x * patchScale);
+  float lat = uLat + (aPos.y - 0.5) * (uPatchAng.y * patchScale);
   float cLat = cos(lat);
   vec3 sp = vec3(
     cLat * sin(lon),
     sin(lat),
     cLat * cos(lon)
-  ) * (uGlobeR * mix(0.76, 1.0, uIntro));
+  ) * (uGlobeR * mix(0.22, 1.0, uIntro));
 
   // Kemiringan poros globe elegan (tilt X + sedikit tilt Z)
   float ax = 0.20;
@@ -223,10 +247,10 @@ void main() {
   float radial = smoothstep(0.98, 0.05, dist);
   float aura = radial * radial;
 
-  vec3 lightHalo = mix(vec3(0.08, 0.13, 0.28), vec3(0.14, 0.30, 1.0), uCharge);
-  vec3 darkHalo = vec3(0.24, 0.50, 1.0);
+  vec3 lightHalo = vec3(0.14, 0.30, 1.0);
+  vec3 darkHalo = vec3(0.28, 0.52, 1.0);
   vec3 haloCol = mix(lightHalo, darkHalo, uDark);
-  float haloAlpha = mix(0.24 + uCharge * 0.36, 0.36 + uCharge * 0.42, uDark) * aura * uHaloFade;
+  float haloAlpha = mix(0.22 + uCharge * 0.34, 0.32 + uCharge * 0.38, uDark) * aura * uHaloFade;
 
   float la = tex.a * uAlpha;
   float ha = haloAlpha * uAlpha;
@@ -391,24 +415,138 @@ function buildGrid(segX, segY) {
 }
 
 /**
- * Preloader WebGL 3D Globe berputar ke kanan yang melebur langsung ke posisi panorama 3D Hero.
- * 8 kartu proyek membentuk bola 3D melengkung di tengah layar, berputar mulus ke kanan,
- * lalu terurai sempurna tepat ke koordinat piksel CurvedProjectLens tanpa patahan.
+ * Preloader 2 tahap:
+ * 1. Loading screen berlogo A yang menyesuaikan kecepatan perangkat/jaringan (minimal ~1,5 detik)
+ *    sambil memuat dan men-decode seluruh aset penting situs (9 tekstur WebP, font, chunk JS, foto, logo).
+ * 2. Setelah seluruh aset siap, WebGL 3D Globe langsung mekar mengelilingi logo A tanpa kartu abu-abu,
+ *    melebur ke Hero, lalu logo A melesat menembus judul partikel "Abel Abhinaya".
  */
-export default function Preloader({ onReveal, onDone }) {
+export default function Preloader({ onReveal, onDone, chunkLoaders = [] }) {
   const reduceMotion = useReducedMotion()
   const rocketCanvasRef = useRef(null)
   const canvasRef = useRef(null)
   const particleCanvasRef = useRef(null)
   const leftTextRef = useRef(null)
   const rightTextRef = useRef(null)
+  const ringArcRef = useRef(null)
+  const pctTextRef = useRef(null)
+
+  const [phase, setPhase] = useState('loading') // 'loading' | 'globe'
+  const [meterDone, setMeterDone] = useState(false)
+  const [webglActive, setWebglActive] = useState(false)
   const [unfolding, setUnfolding] = useState(false)
+  const [ringMetrics, setRingMetrics] = useState(() =>
+    typeof window !== 'undefined'
+      ? computeRingMetrics(window.innerWidth, window.innerHeight)
+      : { logoPx: 120, ringPx: 220, orbitPx: 760, initScale: 0.29, strokeInit: 0.82, strokeEnd: 0.145 },
+  )
+
   const onRevealRef = useRef(onReveal)
   const onDoneRef = useRef(onDone)
+  const chunkLoadersRef = useRef(chunkLoaders)
   onRevealRef.current = onReveal
   onDoneRef.current = onDone
+  chunkLoadersRef.current = chunkLoaders
 
+  // Tahap 1: Preload & decode seluruh aset web sembari mengisi cincin orbit di sekeliling logo A
   useEffect(() => {
+    if (phase !== 'loading') return
+
+    let disposed = false
+    let rafId = 0
+    let handoffTimer = 0
+    let targetP = 0
+    let displayP = 0
+    let lastNow = 0
+    let assetsDone = false
+    let handoffScheduled = false
+
+    const compact = window.innerWidth < 640
+    const minDurationMs = reduceMotion ? 600 : 1200
+    const startedAt = performance.now()
+
+    const syncMetrics = () => {
+      setRingMetrics(computeRingMetrics(window.innerWidth, window.innerHeight))
+    }
+    syncMetrics()
+    window.addEventListener('resize', syncMetrics, { passive: true })
+
+    const controller = preloadSiteAssets({
+      compact,
+      chunkLoaders: chunkLoadersRef.current,
+      minDurationMs,
+      maxWaitMs: 9000,
+      onProgress: (ratio) => {
+        targetP = Math.max(targetP, ratio)
+      },
+    })
+
+    controller.ready.then(() => {
+      if (disposed) return
+      targetP = 1
+      assetsDone = true
+    })
+
+    const paintMeter = (p) => {
+      if (ringArcRef.current) {
+        ringArcRef.current.style.strokeDashoffset = (RING_CIRC * (1 - p)).toFixed(2)
+      }
+      if (pctTextRef.current) {
+        pctTextRef.current.textContent = `${Math.round(p * 100)}%`
+      }
+    }
+
+    const tick = (now) => {
+      if (disposed) return
+      const dt = lastNow ? Math.min(0.05, Math.max(0.001, (now - lastNow) / 1000)) : 1 / 60
+      lastNow = now
+      const elapsed = Math.max(0, now - startedAt)
+      const timeCap = easeOutCubic(Math.min(1, elapsed / minDurationMs))
+      const desired = assetsDone ? 1 : Math.min(targetP, timeCap, 0.98)
+
+      const rate = assetsDone ? 20 : 9.5
+      displayP += (desired - displayP) * (1 - Math.exp(-rate * dt))
+      if (assetsDone && 1 - displayP < 0.006) {
+        displayP = 1
+      }
+      paintMeter(displayP)
+
+      if (assetsDone && displayP >= 1) {
+        if (!handoffScheduled) {
+          handoffScheduled = true
+          setMeterDone(true)
+          // Jeda singkat 80ms saat cincin menutup penuh 360 derajat, lalu langsung mengembang jadi orbit globe
+          handoffTimer = window.setTimeout(() => {
+            if (disposed) return
+            if (reduceMotion) {
+              onRevealRef.current?.()
+              onDoneRef.current?.()
+            } else {
+              setPhase('globe')
+            }
+          }, 80)
+        }
+        return
+      }
+
+      rafId = requestAnimationFrame(tick)
+    }
+
+    rafId = requestAnimationFrame(tick)
+
+    return () => {
+      disposed = true
+      cancelAnimationFrame(rafId)
+      clearTimeout(handoffTimer)
+      window.removeEventListener('resize', syncMetrics)
+      controller.cancel()
+    }
+  }, [phase, reduceMotion])
+
+  // Tahap 2: WebGL 3D Globe (seluruh tekstur sudah ter-decode di cache memori -> 0 kartu abu-abu & 0 lag)
+  useEffect(() => {
+    if (phase !== 'globe') return
+
     if (reduceMotion) {
       onRevealRef.current?.()
       const t = setTimeout(() => onDoneRef.current?.(), 140)
@@ -502,22 +640,31 @@ export default function Preloader({ onReveal, onDone }) {
     const logoTex = gl.createTexture()
     gl.activeTexture(gl.TEXTURE0)
     gl.bindTexture(gl.TEXTURE_2D, logoTex)
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]))
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
     const logoState = { tex: logoTex, img: null, aspect: 1.56, ready: false }
-    const unsubLogo = loadCachedImage('/logo-a.webp', (img) => {
-      if (disposed) return
-      gl.activeTexture(gl.TEXTURE0)
-      gl.bindTexture(gl.TEXTURE_2D, logoTex)
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
-      logoState.img = img
-      logoState.aspect = img.naturalWidth / Math.max(1, img.naturalHeight)
+    let unsubLogo = null
+    const cachedLogo = getCachedImage('/logo-a.webp')
+    if (cachedLogo) {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cachedLogo)
+      logoState.img = cachedLogo
+      logoState.aspect = cachedLogo.naturalWidth / Math.max(1, cachedLogo.naturalHeight)
       logoState.ready = true
-    })
+    } else {
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]))
+      unsubLogo = loadCachedImage('/logo-a.webp', (img) => {
+        if (disposed) return
+        gl.activeTexture(gl.TEXTURE0)
+        gl.bindTexture(gl.TEXTURE_2D, logoTex)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
+        logoState.img = img
+        logoState.aspect = img.naturalWidth / Math.max(1, img.naturalHeight)
+        logoState.ready = true
+      })
+    }
 
     const rocketSparks = buildRocketSparks(compactMesh ? 18 : 34)
     const n = projects.length
@@ -525,14 +672,25 @@ export default function Preloader({ onReveal, onDone }) {
     const tex = projects.map((s) => {
       const t = gl.createTexture()
       gl.bindTexture(gl.TEXTURE_2D, t)
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([240, 242, 246, 255]))
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
+      const imgSrc = projectImageSrc(s.image, compactMesh)
+      const cached = getCachedImage(imgSrc)
+      if (cached) {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, cached)
+        return {
+          t,
+          aspect: cached.naturalWidth / Math.max(1, cached.naturalHeight),
+          ready: true,
+        }
+      }
+
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([240, 242, 246, 255]))
       const entry = { t, aspect: 1.6, ready: false }
-      const unsub = loadCachedImage(projectImageSrc(s.image, compactMesh), (img) => {
+      const unsub = loadCachedImage(imgSrc, (img) => {
         if (disposed) return
         gl.bindTexture(gl.TEXTURE_2D, t)
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
@@ -702,10 +860,11 @@ export default function Preloader({ onReveal, onDone }) {
     const REVEAL_AT = compactMesh ? 1.84 : 2.60 // munculkan subjudul, tombol CTA, dan Nav tepat saat roket menembus ke atas
     const TOTAL_END = compactMesh ? 2.24 : 3.12 // jeda tenang supaya partikel yang terbelah kembali mengunci rapi
 
-    const startTime = performance.now()
+    let startTime = -1
     let startedUnfold = false
     let revealed = false
     let finished = false
+    let firstFrameDrawn = false
     let raf = 0
 
     // Kemiringan poros globe untuk sorting kedalaman z back-to-front
@@ -715,8 +874,10 @@ export default function Preloader({ onReveal, onDone }) {
 
     const frame = (now) => {
       if (disposed) return
+      if (startTime < 0) startTime = now
       const t = (now - startTime) / 1000
-      const intro = easeOutCubic(Math.min(1, t / 0.45))
+      // Mekar radial selaras dengan ekspansi cincin orbit (0 -> 0.68 detik)
+      const intro = easeOutCubic(Math.min(1, t / 0.68))
 
       // Putaran globe ke kanan (sudut naik dari -2.25*pi menuju 0 tepat di Desiltrace)
       const spinT = Math.min(1, t / SPIN_DURATION)
@@ -744,21 +905,23 @@ export default function Preloader({ onReveal, onDone }) {
       const gap = cw * (tw < 640 ? 0.08 : 0.095)
       const step = cw + gap
       const bend = tw < 640 ? 0.24 : 0.34
-      const globeR = Math.min(W * (W < 640 ? 0.46 : 0.34), H * (W < 640 ? 0.34 : 0.42), 400)
+      const globeR = computeGlobeRadius(W, H)
       const isDark = document.documentElement.dataset.theme === 'dark' ? 1 : 0
 
       // Ukuran sudut tiap kartu di permukaan bola agar besar, tajam, dan utuh membentuk globe 3D
       const patchLon = W < 640 ? 0.72 : 0.68
       const patchLat = patchLon * 0.625
 
-      const baseLogoW = Math.max(76, Math.min(156, globeR * 0.45))
+      const baseLogoW = computeCoreLogoWidth(W, H)
       const baseLogoH = baseLogoW / logoState.aspect
-      const logoIntro = easeOutCubic(Math.min(1, t / 0.42))
+      // Logo A sudah hadir penuh di tengah dari tahap loading, lalu berdenyut halus saat memekarkan globe
+      const idleBlend = easeOutCubic(Math.min(1, t / 0.55))
+      const bloomPulse = Math.sin(Math.min(1, t / 0.52) * Math.PI)
       const crouchP =
         t > CROUCH_START ? easeInOutQuart(Math.min(1, (t - CROUCH_START) / (LAUNCH_AT - CROUCH_START))) : 0
       const coreRestY = tcy * 0.40
       const launchOriginY = coreRestY - 16
-      const hoverY = Math.sin(t * 4.4) * 5.5 * (1 - crouchP)
+      const hoverY = Math.sin(t * 4.4) * 5.5 * idleBlend * (1 - crouchP)
 
       const isLaunching = t >= LAUNCH_AT
       const rawLaunch = isLaunching ? t - LAUNCH_AT : -1
@@ -771,15 +934,16 @@ export default function Preloader({ onReveal, onDone }) {
         : hoverY * (1 - morph) + coreRestY * morph - 16 * crouchP
 
       const stretchEase = isLaunching ? easeOutCubic(Math.min(1, lp / 0.35)) : 0
+      const pulseScale = 1 + 0.065 * bloomPulse
       const logoScaleX = isLaunching
         ? 1.09 - 0.25 * stretchEase
-        : (0.62 + 0.38 * logoIntro) * (1 + 0.09 * crouchP)
+        : pulseScale * (1 + 0.09 * crouchP)
       const logoScaleY = isLaunching
         ? 0.89 + 0.41 * stretchEase
-        : (0.62 + 0.38 * logoIntro) * (1 - 0.11 * crouchP)
-      const logoTiltY = isLaunching ? 0 : Math.sin(t * 2.5) * 0.24 * (1 - crouchP)
-      const logoFade = isLaunching ? (lp > 0.82 ? Math.max(0, 1 - (lp - 0.82) / 0.18) : 1) : logoIntro
-      const logoCharge = isLaunching ? Math.max(0.25, 1 - lp * 0.7) : crouchP
+        : pulseScale * (1 - 0.11 * crouchP)
+      const logoTiltY = isLaunching ? 0 : Math.sin(t * 2.5) * 0.24 * idleBlend * (1 - crouchP)
+      const logoFade = isLaunching ? (lp > 0.82 ? Math.max(0, 1 - (lp - 0.82) / 0.18) : 1) : 1
+      const logoCharge = isLaunching ? Math.max(0.25, 1 - lp * 0.7) : Math.max(crouchP, bloomPulse * 0.45)
       const logoHaloFade = isLaunching ? Math.max(0, 1 - Math.min(1, lp / 0.25)) : 1
       const showInsideGlobe =
         logoProgReady && logoState.ready && logoLoc >= 0 && logoFade > 0.01 && rawLaunch <= LAUNCH_DUR + 0.04
@@ -1009,6 +1173,11 @@ export default function Preloader({ onReveal, onDone }) {
         }
       }
 
+      if (!firstFrameDrawn) {
+        firstFrameDrawn = true
+        setWebglActive(true)
+      }
+
       if (t >= TOTAL_END && !finished) {
         finished = true
         onDoneRef.current?.()
@@ -1033,7 +1202,10 @@ export default function Preloader({ onReveal, onDone }) {
       gl.deleteProgram(prog)
       if (logoProg) gl.deleteProgram(logoProg)
     }
-  }, [reduceMotion])
+  }, [phase, reduceMotion])
+
+  const inGlobe = phase === 'globe'
+  const orbitInitialScale = +ringMetrics.initScale.toFixed(4)
 
   return (
     <div className={`preloader preloader--globe no-print${unfolding ? ' is-unfolding' : ''}`} aria-hidden="true">
@@ -1045,50 +1217,113 @@ export default function Preloader({ onReveal, onDone }) {
         transition={{ duration: 0.72, ease: [0.22, 1, 0.36, 1] }}
       />
 
-      {/* Lingkar halo halus di belakang bola 3D */}
-      <motion.div
-        className="preloader__orbit"
-        initial={{ opacity: 0, scale: 0.84 }}
-        animate={unfolding ? { opacity: 0, scale: 1.25 } : { opacity: 1, scale: 1 }}
-        transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-      />
-
-      {/* Teks editorial minimal mengapit globe: langsung larut menjadi partikel saat membuka */}
-      <motion.span
-        className="preloader__side preloader__side--left"
-        initial={{ opacity: 0, x: -20 }}
-        animate={unfolding ? { opacity: 0, x: 0 } : { opacity: 1, x: 0 }}
-        transition={{ duration: unfolding ? 0.13 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+      {/* Tahap 1 -> Jembatan ke Globe: Logo A + cincin orbit progres yang mengembang langsung jadi lingkar globe */}
+      <div
+        className={`preloader__loader${inGlobe ? ' is-expanding' : ''}${webglActive ? ' is-webgl-live' : ''}`}
+        style={{
+          '--ring-size': `${ringMetrics.ringPx}px`,
+          '--orbit-size': `${ringMetrics.orbitPx}px`,
+          '--ring-init-scale': orbitInitialScale,
+          '--ring-stroke-init': ringMetrics.strokeInit,
+          '--ring-stroke-end': ringMetrics.strokeEnd,
+        }}
       >
-        <span ref={leftTextRef}>{leftWord}</span>
-      </motion.span>
+        <div className="preloader__logo-stage">
+          <span className="preloader__logo-aura" />
 
-      <motion.span
-        className="preloader__side preloader__side--right"
-        initial={{ opacity: 0, x: 20 }}
-        animate={unfolding ? { opacity: 0, x: 0 } : { opacity: 1, x: 0 }}
-        transition={{ duration: unfolding ? 0.13 : 0.55, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <span ref={rightTextRef}>{rightWord}</span>
-      </motion.span>
+          <svg
+            className="preloader__ring"
+            viewBox="0 0 100 100"
+            width={ringMetrics.orbitPx}
+            height={ringMetrics.orbitPx}
+          >
+            <g className="preloader__ring-group">
+              <circle className="preloader__ring-track" cx="50" cy="50" r={RING_R} />
+              <circle
+                ref={ringArcRef}
+                className="preloader__ring-arc"
+                cx="50"
+                cy="50"
+                r={RING_R}
+                strokeDasharray={RING_CIRC.toFixed(2)}
+                strokeDashoffset={RING_CIRC.toFixed(2)}
+              />
+            </g>
+          </svg>
+
+          <picture className="preloader__logo-picture">
+            <source srcSet="/logo-a.webp" type="image/webp" />
+            <img
+              src="/logo-a.png"
+              alt=""
+              className="preloader__logo-img"
+              width={ringMetrics.logoPx}
+              height={Math.round(ringMetrics.logoPx * (328 / 512))}
+              style={{ width: `${ringMetrics.logoPx}px` }}
+              decoding="async"
+              fetchPriority="high"
+              draggable="false"
+            />
+          </picture>
+
+          <span ref={pctTextRef} className={`preloader__pct${meterDone || inGlobe ? ' is-done' : ''}`}>
+            0%
+          </span>
+        </div>
+      </div>
+
+      {/* Lingkar orbit globe yang menyambung langsung dari skala cincin loading hingga diameter penuh */}
+      {inGlobe && (
+        <motion.div
+          className="preloader__orbit"
+          initial={{ opacity: 0, scale: orbitInitialScale }}
+          animate={unfolding ? { opacity: 0, scale: 1.25 } : { opacity: 1, scale: 1 }}
+          transition={{ duration: 0.68, ease: [0.22, 1, 0.36, 1] }}
+        />
+      )}
+
+      {/* Teks editorial minimal meluncur keluar selaras dengan mekarnya globe */}
+      {inGlobe && (
+        <>
+          <motion.span
+            className="preloader__side preloader__side--left"
+            initial={{ opacity: 0, x: 34 }}
+            animate={unfolding ? { opacity: 0, x: 0 } : { opacity: 1, x: 0 }}
+            transition={{ duration: unfolding ? 0.13 : 0.64, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <span ref={leftTextRef}>{leftWord}</span>
+          </motion.span>
+
+          <motion.span
+            className="preloader__side preloader__side--right"
+            initial={{ opacity: 0, x: -34 }}
+            animate={unfolding ? { opacity: 0, x: 0 } : { opacity: 1, x: 0 }}
+            transition={{ duration: unfolding ? 0.13 : 0.64, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <span ref={rightTextRef}>{rightWord}</span>
+          </motion.span>
+        </>
+      )}
 
       {/* Kanvas 2D asap roket & shockwave: tepat DI BELAKANG kartu 3D WebGL */}
       <canvas ref={rocketCanvasRef} className="preloader__rocket" />
 
-      {/* Kanvas WebGL penuh layar: 3D Globe berputar ke kanan -> melebur langsung ke Hero */}
+      {/* Kanvas WebGL penuh layar: 3D Globe mekar dari inti logo A -> melebur langsung ke Hero */}
       <canvas ref={canvasRef} className="preloader__canvas" />
 
       {/* Kanvas 2D penuh layar: "Abel" & "Abhinaya." pecah menjadi titik-titik -> membentuk judul besar Hero */}
       <canvas ref={particleCanvasRef} className="preloader__particles" />
 
-      <motion.p
-        className="preloader__foot"
-        initial={{ opacity: 0, y: 8 }}
-        animate={unfolding ? { opacity: 0, y: 10 } : { opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-      >
-        {profile.role} · {profile.institution}
-      </motion.p>
+      {inGlobe && (
+        <motion.p
+          className="preloader__foot"
+          initial={{ opacity: 0, y: 12 }}
+          animate={unfolding ? { opacity: 0, y: 10 } : { opacity: 1, y: 0 }}
+          transition={{ duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
+        >
+          {profile.role} · {profile.institution}
+        </motion.p>
+      )}
     </div>
   )
 }
